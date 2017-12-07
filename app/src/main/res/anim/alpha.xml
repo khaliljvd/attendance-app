@@ -4,4 +4,4 @@
     android:startOffset="200"
     android:fromAlpha="0.0"
     android:toAlpha="1.0"
-    android:duration="500" />
+    android:duration="300" />

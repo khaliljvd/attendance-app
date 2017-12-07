@@ -2,9 +2,6 @@ package khalil.csc131attendance;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationServices;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
@@ -32,63 +29,53 @@ import com.google.api.services.sheets.v4.model.*;
 import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
-import android.graphics.*;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
-import android.media.MediaCas;
-import android.media.tv.TvInputService;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.service.textservice.SpellCheckerService;
 import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.text.TextUtils;
-import android.text.format.DateFormat;
-import android.text.method.ScrollingMovementMethod;
-import android.util.Log;
-import android.view.KeyEvent;
+import android.text.InputType;
+import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.w3c.dom.Text;
-
 import java.io.IOException;
-import java.sql.Time;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
-
-import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
-import static android.Manifest.permission.ACCESS_FINE_LOCATION;
-
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
@@ -102,13 +89,30 @@ public class MainActivity extends Activity
     /////////////////////////////////////
     //////// CHANGE THESE VALUES ////////
     /////////////////////////////////////////////////////
-    private String mEmail = "EMAIL_ADDRESS_HERE";
-    private String mEmailPass = "EMAIL_PASSWORD_HERE";
-    public String mSpreadsheetID = "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=0";
+
+    public String mEmail = "ADMIN EMAIL HERE";
+    public String mEmailPass = "ADMIN EMAIL PASSWORD HERE";
+    public String mSpreadsheetID = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0";
+    private String mSettingsPassword = "YOUR_PASSWORD_FOR_PROFESSOR_PANES";
+
     ////////////////////////////////////////////////////
     ////////////////////////////////////////////////////
 
-    GoogleAccountCredential mCredential;
+    private String mClassSize;
+    private String mStartTime;
+    private String mEndTime;
+    private String mCourseKey;
+    private String mAppPassword;
+    private String mCurrentColumn;
+
+    public GoogleAccountCredential mCredential;
+    private String mSection;
+    public boolean preventFinish;
+    private Toast mToast;
+    private Spinner mySpinner;
+    public boolean isAdmin = false;
+    public boolean isPassDisabled = false;
+    private String deviceID;
     public LocationManager locationManager;
     private android.location.LocationListener locationListener;
     private static final int REQUEST_FINE_LOCATION = 0;
@@ -138,6 +142,7 @@ public class MainActivity extends Activity
     private static final String PREF_ACCOUNT_NAME = "accountName";
     private static final String[] SCOPES = {SheetsScopes.SPREADSHEETS};
 
+
     /**
      * Create the main activity.
      * @param savedInstanceState previously saved instance data.
@@ -151,6 +156,16 @@ public class MainActivity extends Activity
         //mCallApiButton.setBackgroundResource(R.drawable.selector);
         mCallApiButton = (Button) findViewById(R.id.check_in_button);
         mCallApiButton.setBackgroundResource(R.drawable.selector);
+        sid_entry.setAlpha(0.85f);
+        key_entry.setAlpha(0.85f);
+
+        mySpinner = (Spinner) findViewById(R.id.spinner1);
+        ArrayAdapter<String> myAdapter = new ArrayAdapter<String>(MainActivity.this,
+                android.R.layout.simple_list_item_1, getResources().getStringArray(R.array
+        .Courses));
+        myAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mySpinner.setAdapter(myAdapter);
+        mySpinner.setAlpha(0.85f);
 
         ImageView window = (ImageView) findViewById(R.id.window);
         ImageView logo = (ImageView) findViewById(R.id.banner);
@@ -165,6 +180,7 @@ public class MainActivity extends Activity
                 .setBackOff(new ExponentialBackOff());
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
+
         StartAnimations(logo, window);
 
         locationListener = new android.location.LocationListener() {
@@ -172,7 +188,14 @@ public class MainActivity extends Activity
             public void onLocationChanged(Location location) {
                 new spinProgressBar().execute();
                 //Toast.makeText(MainActivity.this, "Updated Location", Toast.LENGTH_LONG).show();
-                double dist = distance(lat1, lon1, locationManager.getLastKnownLocation("gps").getLatitude(), locationManager.getLastKnownLocation("gps").getLongitude(), "m");
+                double lat2 = locationManager.getLastKnownLocation("gps").getLatitude();
+                double lon2 = locationManager.getLastKnownLocation("gps").getLongitude();
+                float[] results = new float[1];
+                Location.distanceBetween(lat1, lon1,
+                        lat2, lon2,
+                        results);
+                double dist = results[0];
+                //double dist = distance(lat1, lon1, locationManager.getLastKnownLocation("gps").getLatitude(), locationManager.getLastKnownLocation("gps").getLongitude(), "m");
                 distanceText.setText(String.format("Distance from class: %.2f meters", dist));
                 setButton(dist);
             }
@@ -185,6 +208,7 @@ public class MainActivity extends Activity
             public void onProviderDisabled(String provider) {
                 Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                 startActivity(intent);
+                finish();
             }
         };
 
@@ -193,13 +217,33 @@ public class MainActivity extends Activity
             return;
         }
 
-        Button settingsButton = (Button) findViewById(R.id.settings);
-
+        Button settingsButton = (Button) findViewById(R.id.nav_settings);
+        settingsButton.setBackgroundResource(R.drawable.selector_nav_settings);
 
         settingsButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                final Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-                startActivity(intent);
+                if(!isPassDisabled)
+                    promptPassword(SettingsActivity.class);
+                else{
+                    final Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+                    startActivity(intent);
+                }
+
+                //overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            }
+        });
+
+        Button listCheckinButton = (Button) findViewById(R.id.nav_multiple);
+        listCheckinButton.setBackgroundResource(R.drawable.selector_nav_list);
+
+        listCheckinButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if(!isPassDisabled)
+                    promptPassword(ListActivity.class);
+                else{
+                    final Intent intent = new Intent(MainActivity.this, ListActivity.class);
+                    startActivity(intent);
+                }
                 //overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
             }
         });
@@ -230,10 +274,77 @@ public class MainActivity extends Activity
         double[] latlng = {locationManager.getLastKnownLocation("gps").getLatitude(),
                 locationManager.getLastKnownLocation("gps").getLongitude()};
 
-        double dist = distance(lat1, lon1, latlng[0], latlng[1], "m");
+        //double dist = distance(lat1, lon1, latlng[0], latlng[1], "m");
+        float[] results = new float[1];
+        Location.distanceBetween(lat1, lon1,
+                latlng[0], latlng[1],
+                results);
+        double dist = results[0];
         setButton(dist);
         distanceText.setText(String.format("Distance from class: %.2f meters", dist));
         gpsProgress.setVisibility(View.GONE);
+    }
+
+    public void promptPassword(final Class mClass){
+        final AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+        alertDialog.setTitle("Restriced Access");
+        alertDialog.setMessage("Please enter the password to continue:");
+
+        final EditText input = new EditText(MainActivity.this);
+        input.setInputType(InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setHighlightColor(Color.RED);
+
+        alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "OK",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        String user_text = (input.getText()).toString();
+                        if(user_text.trim().equals(mSettingsPassword)) {
+                            //Correct Password
+                            dialog.dismiss();
+                            final Intent intent = new Intent(MainActivity.this, mClass);
+                            startActivity(intent);
+                        } else {
+                            //Incorrect Password
+
+                            final AlertDialog wrongPass = new AlertDialog.Builder(MainActivity.this).create();
+                            wrongPass.setMessage("Password Incorrect");
+                            wrongPass.setButton(AlertDialog.BUTTON_NEGATIVE, "Retry", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    wrongPass.dismiss();
+                                    alertDialog.show();
+                                }
+                            });
+                            wrongPass.setButton(AlertDialog.BUTTON_POSITIVE, "Cancel", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    wrongPass.dismiss();
+                                }
+                            });
+                            wrongPass.show();
+
+                        }
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+
+                    }
+                });
+
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            }
+        });
+        alertDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            }
+        });
+        alertDialog.setView(input, 75, 0, 75, 0);
+        alertDialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+        alertDialog.show();
     }
 
     /**
@@ -252,10 +363,12 @@ public class MainActivity extends Activity
     private void getSettings(){
         SharedPreferences mSharedLat = getSharedPreferences("latitude", MODE_PRIVATE);
         SharedPreferences mSharedLong = getSharedPreferences("longitude", MODE_PRIVATE);
-        SharedPreferences.Editor mEditLat = mSharedLat.edit();
-        SharedPreferences.Editor mEditLong = mSharedLong.edit();
+        SharedPreferences mSharedAdmin = getSharedPreferences("admin", MODE_PRIVATE);
+        SharedPreferences mSharedPass = getSharedPreferences("pass", MODE_PRIVATE);
         lat1 = mSharedLat.getFloat("latitude", 0);
         lon1 = mSharedLong.getFloat("longitude", 0);
+        isAdmin = mSharedAdmin.getBoolean("admin", false);
+        isPassDisabled = mSharedPass.getBoolean("pass", false);
     }
 
     /**
@@ -287,15 +400,12 @@ public class MainActivity extends Activity
     public void setButton(Double dist) {
         //Check to see if too far from the classroom
 
-        if (dist > 15) {
-            mCallApiButton.setBackgroundResource(R.drawable.check_in_button_grey);
-            mCallApiButton.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    Toast.makeText(MainActivity.this, "Too far from classroom!", Toast.LENGTH_SHORT).show();
-                }
-            });
-        } else {
-            mCallApiButton.setBackgroundResource(R.drawable.selector);
+        if(dist < 15 || isAdmin) {
+
+            if(!isAdmin){
+                mCallApiButton.setBackgroundResource(R.drawable.selector);
+            }
+
             mCallApiButton.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     sid = sid_entry.getText().toString().trim();
@@ -321,6 +431,13 @@ public class MainActivity extends Activity
                     }
                 }
             });
+        } else if (dist > 15) {
+            mCallApiButton.setBackgroundResource(R.drawable.check_in_button_grey);
+            mCallApiButton.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    toastMessage("Too far from classroom!");
+                }
+            });
         }
     }
 
@@ -341,11 +458,11 @@ public class MainActivity extends Activity
         dist = Math.acos(dist);
         dist = rad2deg(dist);
         dist = dist * 60 * 1.1515;
-        if (unit == "K") {
+        if (unit.equals("K")) {
             dist = dist * 1.609344;
-        } else if (unit == "N") {
+        } else if (unit.equals("N")) {
             dist = dist * 0.8684;
-        } else if (unit == "m"){
+        } else if (unit.equals("m")){
             dist = dist*1.609344*1000;
         }
 
@@ -424,19 +541,25 @@ public class MainActivity extends Activity
      * @param window indicating the check-in window with text.
      */
     private void StartAnimations(ImageView logo, ImageView window) {
-        Animation fade_in = AnimationUtils.loadAnimation(this, R.anim.alpha);
-        Animation slide_in = AnimationUtils.loadAnimation(this, R.anim.translate);
-        //Animation slide_in = AnimationUtils.loadAnimation(this, R.anim.translate);
-        RelativeLayout login_form = (RelativeLayout) findViewById(R.id.login_form);
+        AnimationSet animationSet = new AnimationSet(true);
+        final Animation fade_in = AnimationUtils.loadAnimation(this, R.anim.alpha);
+        final Animation fade_in2 = AnimationUtils.loadAnimation(this, R.anim.alpha);
+        final Animation slide_in = AnimationUtils.loadAnimation(this, R.anim.translate);
+        final RelativeLayout login_form = (RelativeLayout) findViewById(R.id.login_blurred);
+        final ImageView disclaimer = (ImageView) findViewById(R.id.disclaimer);
+        final ImageView banner = (ImageView) findViewById(R.id.banner);
+        //login_form.startAnimation(fade_in);
+        animationSet.addAnimation(fade_in);
+        animationSet.addAnimation(slide_in);
 
-        login_form.startAnimation(fade_in);
-
-        sid_entry.startAnimation(slide_in);
-        key_entry.startAnimation(slide_in);
-        distanceText.startAnimation(fade_in);
-        window.startAnimation(slide_in);
-        //distanceText.startAnimation(slide_in);
-        mCallApiButton.startAnimation(slide_in);
+        banner.startAnimation(fade_in);
+        sid_entry.startAnimation(animationSet);
+        key_entry.startAnimation(animationSet);
+        mySpinner.startAnimation(animationSet);
+        distanceText.startAnimation(animationSet);
+        disclaimer.startAnimation(animationSet);
+        window.startAnimation(animationSet);
+        mCallApiButton.startAnimation(animationSet);
 
     }
 
@@ -455,7 +578,8 @@ public class MainActivity extends Activity
         } else if (! isDeviceOnline()) {
             System.out.println("No network connection available.");
         } else {
-            new MakeRequestTask(mCredential).execute();
+            preventFinish = false;
+            new GetGlobalVars(mCredential).execute();
         }
     }
 
@@ -471,6 +595,7 @@ public class MainActivity extends Activity
      */
     @AfterPermissionGranted(REQUEST_PERMISSION_GET_ACCOUNTS)
     private void chooseAccount() {
+        preventFinish = true;
         if (EasyPermissions.hasPermissions(
                 this, Manifest.permission.GET_ACCOUNTS)) {
             String accountName = getPreferences(Context.MODE_PRIVATE)
@@ -601,7 +726,11 @@ public class MainActivity extends Activity
      *     date on this device; false otherwise.
      */
     private void toastMessage(String message){
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        if(mToast!=null)
+            mToast.cancel();
+        mToast = Toast.makeText(this, message, Toast.LENGTH_SHORT);
+        mToast.setGravity(Gravity.CENTER_HORIZONTAL,0,800);
+                mToast.show();
     }
 
     /**
@@ -730,7 +859,7 @@ public class MainActivity extends Activity
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
             //pdialog.hide();
-            Toast.makeText(MainActivity.this, "Email Sent!", Toast.LENGTH_SHORT).show();
+            toastMessage("Email Sent!");
         }
 
         /**
@@ -739,7 +868,7 @@ public class MainActivity extends Activity
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            subject = "Subject Line";
+            subject = "Check-In Receipt";
         }
     }
 
@@ -751,6 +880,8 @@ public class MainActivity extends Activity
     public void onPause(){
         super.onPause();
         locationManager.removeUpdates(locationListener);
+        if(!preventFinish)
+            finish();
         //this.finishAffinity();
     }
 
@@ -764,14 +895,144 @@ public class MainActivity extends Activity
         super.onResume();
         getSettings();
 
+        if(isAdmin) {
+            mCallApiButton.setBackgroundResource(R.drawable.selector_check_in_admin);
+            deviceID = "ADMIN";
+        }
+        else {
+            deviceID = Settings.Secure.getString(getContentResolver(),
+                    Settings.Secure.ANDROID_ID);
+        }
+
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, locationListener);
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, locationListener);
 
         double[] latlng = {locationManager.getLastKnownLocation("gps").getLatitude(),
                 locationManager.getLastKnownLocation("gps").getLongitude()};
-        double dist = distance(lat1, lon1, latlng[0], latlng[1], "m");
+
+        float[] results = new float[1];
+        Location.distanceBetween(lat1, lon1,
+                latlng[0], latlng[1],
+                results);
+        double dist = results[0];
+        //double dist = distance(lat1, lon1, latlng[0], latlng[1], "m");
         setButton(dist);
         distanceText.setText(String.format("Distance from class: %.2f meters", dist));
+    }
+
+    private class GetGlobalVars extends AsyncTask<Void, Void, Void> {
+        private com.google.api.services.sheets.v4.Sheets mService = null;
+        private Exception mLastError = null;
+        GetGlobalVars(GoogleAccountCredential credential) {
+            System.out.println("HERE ARE THE CREDS: " + credential);
+            HttpTransport transport = AndroidHttp.newCompatibleTransport();
+            JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+            mService = new com.google.api.services.sheets.v4.Sheets.Builder(
+                    transport, jsonFactory, credential)
+                    .setApplicationName("Google Sheets API Android Quickstart")
+                    .build();
+        }
+
+        /**
+         * Background task to call Google Sheets API.
+         * @param params no parameters needed for this task.
+         */
+        @Override
+        protected Void doInBackground(Void... params) {
+            try {
+                getDataFromApi();
+                return null;
+            } catch (Exception e) {
+                mLastError = e;
+                System.out.println(mLastError);
+                cancel(true);
+                return null;
+            }
+        }
+
+        /**
+         * Grabs the values from the Google Sheet and checks the student-id and key.
+         * If both match the sheet, the writeSheet() function is called to update
+         * the Google Sheet. Otherwise, the error code is updated depending on the
+         * type of error.
+         * @return The contents of the Google Sheet
+         * @throws IOException if unable to grab data from the Sheet.
+         */
+        private void getDataFromApi() throws IOException {
+            String spreadsheetId = mSpreadsheetID;
+            List<String> results = new ArrayList<String>();
+            mSection = mySpinner.getSelectedItem().toString();
+            String range = mSection + "!B1:E3";
+
+            ValueRange response = this.mService.spreadsheets().values()
+                    .get(spreadsheetId, range)
+                    .execute();
+            List<List<Object>> values = response.getValues();
+
+            if (values != null) {
+                mClassSize = values.get(0).get(1).toString();
+                mStartTime = values.get(0).get(3).toString();
+                mEndTime = values.get(1).get(3).toString();
+                mCourseKey = values.get(1).get(1).toString();
+                mSettingsPassword = values.get(2).get(3).toString();
+                mCurrentColumn = values.get(2).get(1).toString();
+            }
+        }
+
+        /**
+         * Called before the Async task starts to give a visual
+         * notification to the user that the application is contacting
+         * the Google Sheets API.
+         */
+
+        @Override
+        protected void onPreExecute(){
+            System.out.println("");
+            mProgress.show();
+            mSpreadsheetID = getURL();
+        }
+
+        /**
+         * Called after the Async task starts to take action and notify the user
+         * on the result of the check in attempt.
+         */
+        @Override
+        protected void onPostExecute(Void params) {
+            mProgress.hide();
+            System.out.println("Class Size: " + mClassSize);
+            System.out.println("Start Time: " + mStartTime);
+            System.out.println("End Time: " + mEndTime);
+            System.out.println("Course Key: " + mCourseKey);
+            System.out.println("Password: " + mSettingsPassword);
+            new MakeRequestTask(mCredential).execute();
+            //storeVariables();
+        }
+
+        /**
+         * Cancels the Google Sheets API call if there is an IO Exception.
+         * This occurs due to an incorrect URL entry.
+         */
+        @Override
+        protected void onCancelled() {
+            mProgress.hide();
+            if (mLastError != null) {
+                if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
+                    showGooglePlayServicesAvailabilityErrorDialog(
+                            ((GooglePlayServicesAvailabilityIOException) mLastError)
+                                    .getConnectionStatusCode());
+                } else if (mLastError instanceof UserRecoverableAuthIOException) {
+                    startActivityForResult(
+                            ((UserRecoverableAuthIOException) mLastError).getIntent(),
+                            MainActivity.REQUEST_AUTHORIZATION);
+                } else {
+                    System.out.println("The following error occurred:\n"
+                            + mLastError.getMessage());
+                    toastMessage("Unable to get Google Sheets Data. Did you enter the URL correctly?");
+                }
+            } else {
+                System.out.println("Request cancelled.");
+            }
+        }
     }
 
     /**
@@ -784,6 +1045,7 @@ public class MainActivity extends Activity
         private Exception mLastError = null;
         private Object date;
         private Object time;
+        private boolean isWithinTime;
         private boolean updateSuccess = false;
         private int errorCode = 0;
         private java.text.DateFormat dateFormat;
@@ -824,21 +1086,39 @@ public class MainActivity extends Activity
          */
         private List<String> getDataFromApi() throws IOException {
             Boolean found = false;
+            Boolean isUnique;
             String spreadsheetId = mSpreadsheetID;
-            String range = "Class Data!A2:J32";
+            mSection = mySpinner.getSelectedItem().toString();
+            String range = mSection + "!A5:J" + (mClassSize+5);
+            System.out.println(range);
+            System.out.println(mSpreadsheetID);
             List<String> results = new ArrayList<String>();
             ValueRange response = this.mService.spreadsheets().values()
                     .get(spreadsheetId, range)
                     .execute();
             List<List<Object>> values = response.getValues();
-            int count = 1;
+
+            if(!isAdmin)
+                isUnique = isUnique(response, values);
+            else
+                isUnique = true;
+
+            int count = 1 + 4;
+            boolean readHeaders = true;
             boolean firstRun = true;
-            if (values != null) {
+            if (values != null && isUnique && isWithinTime) {
+                System.out.println("MADE IT HERE\n");
                 for (List row : values) {
-                    if(firstRun && (row.get(9).toString().equals(key))){
+                    if(readHeaders){
+                        readHeaders = false;
+                        if(!row.get(5).toString().equals(date))
+                            shiftColumns(values, response);
+                        continue;
+                    }
+
+                    if(firstRun && (mCourseKey.equals(key))){
                         firstRun = false;
                     } else if (firstRun) {
-                        System.out.println("KEY: " + row.get(9).toString());
                         errorCode = 1;
                         break;
                     }
@@ -846,21 +1126,22 @@ public class MainActivity extends Activity
                     val = row.get(0).toString();
                     System.out.println(val);
                     if(val.equals(sid)) {
+                        System.out.println("MADE IT HERE\n");
+
                         found = true;
-                        System.out.println("FOUND");
                         //Grab the current attendance state
-                        String currentAtt = row.get(3).toString();
-                        System.out.println("FOUND2");
+                        String currentAtt = row.get(5).toString();
+                        System.out.println("MADE IT HERE\n");
                         //If already checked in, notify and break
-                        if(currentAtt.equals("Yes")) {
+                        if(!currentAtt.equals("-")) {
                             errorCode = 3;
                             break;
                         }
                         //Write to the attendance section of the sheet based on found row
-                        rec = row.get(6).toString().trim();
+                        rec = row.get(3).toString().trim();
                         name = row.get(1).toString() + " " + row.get(2).toString();
                         System.out.println(rec);
-                        String writeRange = "Class Data!D" + count + ":F" + count;
+                        String writeRange = mSection + "!E" + count + ":F" + count;
                         writeSheet(spreadsheetId, writeRange);
                         break;
                     }
@@ -870,7 +1151,55 @@ public class MainActivity extends Activity
                 }
             }
 
+            if(!isUnique)
+                errorCode = 4;
+
+            if(!isWithinTime)
+                errorCode = 5;
+
             return results;
+        }
+
+        private void shiftColumns (List<List<Object>> values, ValueRange response) throws IOException {
+            String range = mSection + "!F5:F36";
+            Object[] copiedRow = new String[1];
+            int count = 4;
+            for(List row : values){
+                count++;
+                copiedRow[0] = row.get(5).toString();
+
+                List<List<Object>> setRow = Arrays.asList(
+                        Arrays.asList(
+                                copiedRow[0]
+                        )
+                        // Additional rows ...
+                );
+                String writeRange = mSection + "!G"+ count;
+                ValueRange body = new ValueRange()
+                        .setValues(setRow);
+                try {
+                    UpdateValuesResponse result =
+                            mService.spreadsheets().values().update(mSpreadsheetID, writeRange, body)
+                                    .setValueInputOption("USER_ENTERED")
+                                    .execute();
+                    updateSuccess = true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            //Create Todays Column
+            //Zero out DeviceID
+        }
+
+        private boolean isUnique(ValueRange results, List<List<Object>> values) throws IOException{
+            boolean notFound = true;
+            for (List row : values) {
+                if(row.get(4).toString().equals(deviceID)) {
+                    notFound = false;
+                    break;
+                }
+            }
+            return notFound;
         }
 
         /**
@@ -882,19 +1211,11 @@ public class MainActivity extends Activity
          */
         private void writeSheet(String spreadsheetId, String writeRange){
             System.out.println("Updating Sheet");
-            dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-            timeFormat = new SimpleDateFormat("hh:mm:ss a");
-            Date MM_dd_yyyy = new Date();
-            Date HH_mm_ss = new Date();
-
-            Object attending = "Yes";
-            date = dateFormat.format(MM_dd_yyyy);
-            time = timeFormat.format(HH_mm_ss);
             date_time = date + " at " + time;
 
             List<List<Object>> setRow = Arrays.asList(
                     Arrays.asList(
-                            attending,date,time
+                            deviceID,time
                     )
                     // Additional rows ...
             );
@@ -911,6 +1232,46 @@ public class MainActivity extends Activity
             }
         }
 
+        private boolean checkTime(){
+            boolean within;
+            try {
+                String string1 = mStartTime;
+                System.out.println(mStartTime);
+                Date time1 = new SimpleDateFormat("hh:mm:ss a").parse(string1);
+                Calendar calendar1 = Calendar.getInstance();
+                calendar1.setTime(time1);
+                calendar1.add(Calendar.DATE, 1);
+
+                String string2 = mEndTime;
+                Date time2 = new SimpleDateFormat("hh:mm:ss a").parse(string2);
+                Calendar calendar2 = Calendar.getInstance();
+                calendar2.setTime(time2);
+                calendar2.add(Calendar.DATE, 1);
+
+                String someRandomTime = time.toString();
+                Date d = new SimpleDateFormat("hh:mm:ss a").parse(someRandomTime);
+                Calendar calendar3 = Calendar.getInstance();
+                calendar3.setTime(d);
+                calendar3.add(Calendar.DATE, 1);
+                Date x = calendar3.getTime();
+
+                System.out.println("Checking to see if " + time.toString() + " is between " + string1 + " and " + string2);
+
+                if (x.after(calendar1.getTime()) && x.before(calendar2.getTime())) {
+                    //checks whether the current time is between 14:49:00 and 20:11:13.
+                    System.out.println("You are within the time");
+                    within =  true;
+                }else{
+                    System.out.println("You are outside of the time");
+                    within = false;
+                }
+                return within;
+
+            } catch (ParseException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
         /**
          * Called before the Async task starts to give a visual
          * notification to the user that the application is contacting
@@ -921,6 +1282,18 @@ public class MainActivity extends Activity
             System.out.println("");
             mProgress.show();
             mSpreadsheetID = getURL();
+            Date MM_dd_yyyy = new Date();
+            Date HH_mm_ss = new Date();
+            date = new SimpleDateFormat("MM/dd/yyyy").format(MM_dd_yyyy);
+            time = new SimpleDateFormat("hh:mm:ss a").format(HH_mm_ss);
+
+            if(!isAdmin) {
+                isWithinTime = checkTime();
+                System.out.println("Within Time: " + isWithinTime);
+            }
+            else{
+                isWithinTime = true;
+            }
         }
 
         /**
@@ -939,8 +1312,12 @@ public class MainActivity extends Activity
                 toastMessage("Invalid Key!");
             } else if (errorCode == 2){
                 toastMessage("Student ID not Found!");
+            } else if (errorCode == 5){
+                toastMessage("You are outside the check in time!");
             } else if (errorCode == 3){
                 toastMessage("Already Checked in!");
+            } else if (errorCode == 4){
+                toastMessage("This Device Already Checked In!");
             } else {
                 //output.add(0, "Data retrieved using the Google Sheets API:");
                 if (updateSuccess) {
@@ -984,7 +1361,7 @@ public class MainActivity extends Activity
                 } else {
                     System.out.println("The following error occurred:\n"
                             + mLastError.getMessage());
-                    Toast.makeText(MainActivity.this, "Unable to get Google Sheets Data. Did you enter the URL correctly?", Toast.LENGTH_LONG).show();
+                    toastMessage("Unable to get Google Sheets Data. Did you enter the URL correctly?");
                 }
             } else {
                 System.out.println("Request cancelled.");
@@ -998,13 +1375,25 @@ public class MainActivity extends Activity
      * into an email template and updates the global variables.
      */
     private void setMessage(String student_id) {
+
+        textMessage = "<html>" + "<img src=\"https://i.imgur.com/31DNBd9.jpg\">" +
+                "<h2>" + mSection + " Attendance Receipt" + "</h2>" + "<p>" + "You successfully checked in!<br />Here is your receipt:<br /><br />" +
+                "-------------------------------------------------------------<br />" +
+                "Name: " + name + "<br />" +
+                "Student ID: " + student_id + "<br />" +
+                "Checked in on " + date_time + "<br />" +
+                "-------------------------------------------------------------" +
+                "</p>" +
+                "</html>";
+        /*
         textMessage = "Here is your receipt:<br /><br />" +
                 "------------------------------------------------<br />" +
                 "Name: " + name + "<br />" +
                 "Student ID: " + student_id + "<br />" +
                 "Checked in on " + date_time + "<br />" +
                 "----------------------------------------------------";
-        subject = "Subject Line";
+                */
+        subject = "Check In Receipt (" + mSection + ")";
     }
 
 

@@ -13,4 +13,10 @@
     <string name="permission_rationale">"Contacts permissions are needed for providing email
         completions."
     </string>
+    
+    <string-array name="Courses">
+        <item>CSC 131 - 01</item>
+        <item>CSC 131 - 02</item>
+        <item>CSC 131 - 03</item>
+    </string-array>
 </resources>

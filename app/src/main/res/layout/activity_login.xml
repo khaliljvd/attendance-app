@@ -16,105 +16,164 @@
         android:background="@drawable/background"
         android:layout_width="match_parent"
         android:layout_gravity="center"
-        android:focusable="true"
-        android:focusableInTouchMode="true"
-        android:clickable="true"
         android:layout_height="wrap_content">
 
-        <ProgressBar
-        android:id="@+id/login_progress"
-        style="?android:attr/progressBarStyleLarge"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:visibility="gone" />
+        <RelativeLayout
+            android:id="@+id/login_blurred"
+            android:background="@drawable/background_blurred"
+            android:layout_width="match_parent"
+            android:layout_gravity="center"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:clickable="true"
+            android:layout_height="wrap_content">
 
-        <ImageView
-            android:id="@+id/banner"
-            android:layout_width="90dp"
-            android:background="@drawable/csus_logo"
-            android:layout_height="100dp"
-            android:layout_marginTop="25dp"
-            android:layout_alignParentTop="true"
-            android:layout_centerHorizontal="true" />
-        <ImageView
-            android:id="@+id/window"
-            android:layout_width="265dp"
-            android:layout_height="285dp"
-            android:background="@drawable/window"
-            android:layout_marginTop="140dp"
-            android:layout_centerHorizontal="true" />
-
-        <AutoCompleteTextView
-            android:id="@+id/sid"
-            android:layout_width="230dp"
-            android:layout_height="40dp"
-            android:layout_alignParentTop="true"
-            android:layout_alignStart="@+id/password"
-            android:layout_marginTop="192dp"
-            android:background="@android:color/transparent"
-            android:hint="@string/prompt_email"
-            android:inputType="number"
-            android:maxLines="1"
-            android:singleLine="true"
-            android:textSize="18sp" />
-
-        <AutoCompleteTextView
-            android:id="@+id/password"
-            android:layout_width="230dp"
-            android:layout_height="40dp"
-            android:layout_below="@+id/sid"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="9dp"
-            android:background="@android:color/transparent"
-            android:fontFamily="sans-serif"
-            android:hint="@string/prompt_password"
-            android:imeActionId="@+id/login"
-            android:imeActionLabel="@string/action_sign_in_short"
-            android:inputType="number"
-            android:maxLines="1"
-            android:singleLine="true"
-            android:textSize="18sp" />
-
-        <Button
-            android:id="@+id/check_in_button"
-            style="?android:textAppearanceSmall"
-            android:layout_width="265dp"
-            android:layout_height="47dp"
-            android:textStyle="bold"
-            android:layout_marginTop="25dp"
-            android:layout_below="@+id/password"
-            android:layout_centerHorizontal="true" />
-
-        <Button
-            android:id="@+id/settings"
-            android:background="@drawable/settings"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginEnd="20dp"
-            android:layout_alignTop="@+id/banner"
-            android:layout_alignParentEnd="true"/>
-
-        <TextView
-            android:id="@+id/Distance"
+            <ProgressBar
+            android:id="@+id/login_progress"
+            style="?android:attr/progressBarStyleLarge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignStart="@+id/window"
-            android:layout_below="@+id/check_in_button"
-            android:layout_marginTop="13dp"
-            android:text="Distance from classroom:"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
 
-        <ProgressBar
-            android:layout_width="20dp"
-            android:id="@+id/loading_panel"
-            android:layout_height="20dp"
-            android:indeterminate="true"
-            android:layout_alignBottom="@+id/Distance"
-            android:layout_alignEnd="@+id/password" />
+            <ImageView
+                android:id="@+id/banner"
+                android:layout_width="90dp"
+                android:background="@drawable/csus_logo"
+                android:layout_height="100dp"
+                android:layout_marginTop="45dp"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true" />
 
+            <ImageView
+                android:id="@+id/window"
+                android:layout_width="260dp"
+                android:layout_height="20dp"
+                android:layout_below="@+id/banner"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="15dp"
+                android:background="@drawable/window" />
+
+            <AutoCompleteTextView
+                android:id="@+id/sid"
+                android:paddingLeft="15dp"
+                android:paddingRight='15dp'
+                android:layout_width="260dp"
+                android:layout_height="45dp"
+                android:layout_alignParentTop="true"
+                android:layout_alignStart="@+id/password"
+                android:layout_marginTop="205dp"
+                android:background="@drawable/text_background"
+                android:hint="@string/prompt_email"
+                android:inputType="number"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:textSize="18sp" />
+
+            <AutoCompleteTextView
+                android:id="@+id/password"
+                android:paddingLeft="15dp"
+                android:paddingRight='15dp'
+                android:layout_width="260dp"
+                android:layout_height="45dp"
+                android:layout_below="@+id/sid"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="9dp"
+                android:background="@drawable/text_background"
+                android:fontFamily="sans-serif"
+                android:hint="@string/prompt_password"
+                android:imeActionId="@+id/login"
+                android:imeActionLabel="@string/action_sign_in_short"
+                android:inputType="number"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:textSize="18sp" />
+
+            <Spinner
+                android:layout_width="260dp"
+                android:layout_height="45dp"
+                android:layout_centerHorizontal="true"
+                android:background="@drawable/text_background"
+                android:layout_marginTop="9dp"
+                android:layout_below="@+id/password"
+                android:id="@+id/spinner1"/>
+
+            <Button
+                android:id="@+id/check_in_button"
+                style="?android:textAppearanceSmall"
+                android:layout_width="260dp"
+                android:layout_height="45dp"
+                android:textStyle="bold"
+                android:layout_marginTop="25dp"
+                android:layout_below="@+id/spinner1"
+                android:layout_centerHorizontal="true" />
+
+            <TextView
+                android:id="@+id/Distance"
+                android:layout_width="260dp"
+                android:paddingRight="15dp"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:layout_below="@+id/check_in_button"
+                android:layout_marginTop="13dp"
+                android:text="Distance from classroom:"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <ProgressBar
+                android:layout_width="20dp"
+                android:id="@+id/loading_panel"
+                android:layout_height="20dp"
+                android:indeterminate="true"
+                android:layout_alignBottom="@+id/Distance"
+                android:layout_alignEnd="@+id/password" />
+
+            <ImageView
+                android:id="@+id/disclaimer"
+                android:layout_width="260dp"
+                android:layout_height="30dp"
+                android:layout_centerHorizontal="true"
+                android:layout_below="@id/Distance"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/disclaimer" />
+
+            <ImageView
+                android:id="@+id/navigation"
+                android:layout_width="match_parent"
+                android:background="#FFFFFF"
+                android:layout_height="56dp"
+                android:layout_alignParentBottom="true" />
+
+            <Button
+                android:id="@+id/nav_check_in"
+                android:layout_width="58dp"
+                android:layout_height="58dp"
+                android:background="@drawable/nav_bar_check_select"
+                android:layout_centerHorizontal="true"
+                android:layout_alignTop="@id/navigation"/>
+
+            <Button
+                android:id="@+id/nav_multiple"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:background="@drawable/nav_bar_multiple"
+                android:layout_centerHorizontal="true"
+                android:layout_alignParentLeft="true"
+                android:layout_marginLeft="50dp"
+                android:layout_alignTop="@id/navigation"/>
+
+            <Button
+                android:id="@+id/nav_settings"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:background="@drawable/nav_bar_setting"
+                android:layout_centerHorizontal="true"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="50dp"
+                android:layout_alignTop="@id/navigation"/>
+
+        </RelativeLayout>
     </RelativeLayout>
 
 </RelativeLayout>
