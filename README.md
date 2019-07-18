@@ -1,5 +1,5 @@
-# attendance-app
-Android Application for Taking Attendance
+# Student Attendance Application
+Android Application for Taking Attendance by utilizing the Google Sheets API.
 
 Note: In order for the app to work, you must change the global variables mEmail, mEmailPass, and mSpreadsheetID in the following file: /app/src/main/java/MainActivity.java
 
