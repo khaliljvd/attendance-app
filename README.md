@@ -7,4 +7,6 @@ The email address is used to send the SMTP email receipts upon check-in.
 
 ## Video Demonstration
 
-[![Audi R8](http://img.youtube.com/vi/QSUPn3xjjSQ/0.jpg)](https://www.youtube.com/watch?v=QSUPn3xjjSQ "Audi R8")
+Click on the image to watch the full video which outlines all features!
+
+[![App](http://img.youtube.com/vi/QSUPn3xjjSQ/0.jpg)](https://www.youtube.com/watch?v=QSUPn3xjjSQ "App")
