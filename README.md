@@ -7,10 +7,4 @@ The email address is used to send the SMTP email receipts upon check-in.
 
 ## Video Demonstration
 
-<object width="425" height="350">
-  <param name="movie" value="https://www.youtube.com/watch?v=QSUPn3xjjSQ" />
-  <param name="wmode" value="transparent" />
-  <embed src="https://www.youtube.com/watch?v=QSUPn3xjjSQ"
-         type="application/x-shockwave-flash"
-         wmode="transparent" width="425" height="350" />
-</object>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/QSUPn3xjjSQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
